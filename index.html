@@ -537,7 +537,7 @@
         // Gọi Live Weather API với đầy đủ vĩ độ và kinh độ của Hà Nội
         async function fetchLiveWeather() {
             try {
-                const response = await fetch('https://mockapi.io/projects/6ae8463b1a7b15aaa50edc3d#');
+                const response = await fetch('https://6ae84ecf1a7b15aaa50ee6c4.mockapi.io/content/98');
                 const data = await response.json();
                 if (data && data.current_weather) {
                     const temp = data.current_weather.temperature;
