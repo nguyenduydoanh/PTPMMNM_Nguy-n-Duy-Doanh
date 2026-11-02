@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechNews 247 - TMS Integration & API Testing Demo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        .badge-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .6; }
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 antialiased min-h-full flex flex-col pb-12">
+
+    <!-- Top Status Banner for TMS Info -->
+    <div class="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <i class="fa-solid me-1.5 fa-network-wired text-xs"></i> TMS Endpoint Mode + Live Weather API
+                </span>
+                <span class="text-slate-400 hidden sm:inline">GET / PUT <code class="text-sky-300 font-mono">/api/v1/news/content</code></span>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-slate-400">Trạng thái phiên bản:</span>
+                    <span id="versionBadge" class="badge-pulse px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        [Bản gốc - VI]
+                    </span>
+                </div>
+                <button onclick="openTmsConsole()" class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1 rounded text-xs font-medium transition-all shadow-sm flex items-center space-x-1.5">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>TMS Console (API)</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="w-11 h-11 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl flex items-center justify-center text-white text-xl font-black shadow-md shadow-sky-500/20">
+                        T24
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black tracking-tight text-slate-900 leading-none">
+                            TechNews <span class="text-sky-600">247</span>
+                        </h1>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5" id="headerTagline">
+                            Cập nhật tri thức công nghệ & đời sống
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="hidden md:flex space-x-1 lg:space-x-2">
+                    <a href="#" class="px-3 py-2 rounded-lg text-sm font-semibold text-sky-600 bg-sky-50" id="navHome">Trang chủ</a>
+                    <a href="#" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition" id="navNews">Thời sự</a>
+                    <a href="#" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition" id="navTech">Công nghệ</a>
+                    <a href="#" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition" id="navEntertainment">Giải trí</a>
+                </nav>
+
+                <!-- Quick Preset Language Selector for Preview (Chỉ giữ lại Tiếng Việt) -->
+                <div class="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                    <i class="fa-solid fa-globe text-slate-500 text-sm ml-2 mr-1"></i>
+                    <select id="presetSelector" onchange="switchPreset(this.value)" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer pr-2">
+                        <option value="vi">Tiếng Việt (Bản gốc)</option>
+                    </select>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 flex-1">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Main Content Area (8 Cols) -->
+            <div class="lg:col-span-8 space-y-10">
+                
+                <!-- Featured Article -->
+                <article class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden hover:shadow-md transition-all duration-300">
+                    <div class="relative h-72 sm:h-96 overflow-hidden bg-slate-900">
+                        <img id="featuredImg" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80" alt="Featured News" class="w-full h-full object-cover opacity-90 hover:scale-105 transition duration-700">
+                        <div class="absolute top-4 left-4 bg-sky-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm" id="featuredCategory">
+                            Công nghệ AI
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 sm:p-8">
+                        <div class="flex items-center text-xs text-slate-400 font-medium space-x-4 mb-3">
+                            <span class="flex items-center"><i class="fa-regular fa-clock me-1.5"></i> 10 phút trước</span>
+                            <span class="flex items-center" id="featuredAuthor"><i class="fa-regular fa-user me-1.5"></i> Ban Biên Tập</span>
+                        </div>
+
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug mb-4 hover:text-sky-600 transition cursor-pointer" id="featuredTitle">
+                            Kỷ nguyên trí tuệ nhân tạo thế hệ mới: Đột phá công nghệ thay đổi tương lai làm việc
+                        </h2>
+
+                        <p class="text-slate-600 font-medium text-base sm:text-lg leading-relaxed mb-6" id="featuredSummary">
+                            Các mô hình ngôn ngữ lớn đang nhanh chóng thay đổi cách thức vận hành của doanh nghiệp toàn cầu. Sự kết hợp giữa AI và khả năng đa ngôn ngữ tự động giúp rút ngắn khoảng cách giao tiếp quốc tế hơn bao giờ hết.
+                        </p>
+
+                        <div class="border-t border-slate-100 pt-6 text-slate-700 leading-relaxed space-y-4 text-sm sm:text-base" id="featuredContent">
+                            <p>
+                                Công nghệ AI không chỉ dừng lại ở việc xử lý văn bản đơn thuần mà đang bước sang giai đoạn thấu hiểu ngữ cảnh sâu sắc. Việc triển khai các hệ thống TMS (Translation Management System) tích hợp trực tiếp qua API cho phép các cơ quan báo chí xuất bản nội dung đa ngôn ngữ theo thời gian thực.
+                            </p>
+                            <p>
+                                Nhờ quy trình phê duyệt tự động và khả năng đồng bộ Git-flow, các bản dịch nháp có thể được duyệt nhanh chóng bởi các Kiểm duyệt viên chuyên nghiệp trước khi phát hành chính thức đến độc giả toàn cầu.
+                            </p>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+                            <button class="bg-sky-600 hover:bg-sky-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow-sm flex items-center space-x-2">
+                                <span id="btnReadMore">Đọc tiếp bài viết</span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                            <div class="flex space-x-2 text-slate-400">
+                                <button class="w-9 h-9 rounded-full bg-slate-100 hover:bg-sky-50 hover:text-sky-600 flex items-center justify-center transition"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+                                <button class="w-9 h-9 rounded-full bg-slate-100 hover:bg-sky-50 hover:text-sky-600 flex items-center justify-center transition"><i class="fa-regular fa-bookmark text-xs"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Recent Articles Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-slate-900 flex items-center" id="secRecentTitle">
+                            <span class="w-2.5 h-6 bg-sky-600 rounded-full me-2.5 inline-block"></span>
+                            Tin tức mới cập nhật
+                        </h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="recentArticlesGrid">
+                        <!-- Card 1 -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 hover:border-sky-200 shadow-sm hover:shadow transition flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider mb-2 block" id="card1Category">Đời sống</span>
+                                <h4 class="font-bold text-slate-900 text-base mb-2 hover:text-sky-600 cursor-pointer line-clamp-2" id="card1Title">
+                                    Xu hướng làm việc từ xa và mô hình văn phòng linh hoạt năm 2026
+                                </h4>
+                                <p class="text-xs text-slate-500 line-clamp-3 leading-relaxed" id="card1Summary">
+                                    Các công ty công nghệ lớn tiếp tục áp dụng mô hình làm việc kết hợp, giúp nâng cao hiệu suất làm việc và chất lượng sống của nhân viên.
+                                </p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center">
+                                <span id="card1Time">1 giờ trước</span>
+                                <span class="font-medium text-sky-600 hover:underline cursor-pointer">Chi tiết &rarr;</span>
+                            </div>
+                        </div>
+
+                        <!-- Card 2 -->
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200/80 hover:border-sky-200 shadow-sm hover:shadow transition flex flex-col justify-between">
+                            <div>
+                                <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 block" id="card2Category">Kinh tế số</span>
+                                <h4 class="font-bold text-slate-900 text-base mb-2 hover:text-sky-600 cursor-pointer line-clamp-2" id="card2Title">
+                                    Thị trường điện toán đám mây đạt mốc tăng trưởng kỷ lục
+                                </h4>
+                                <p class="text-xs text-slate-500 line-clamp-3 leading-relaxed" id="card2Summary">
+                                    Đầu tư vào hạ tầng AI và dịch vụ lưu trữ dữ liệu đám mây tăng mạnh tại thị trường Đông Nam Á.
+                                </p>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-400 flex justify-between items-center">
+                                <span id="card2Time">3 giờ trước</span>
+                                <span class="font-medium text-sky-600 hover:underline cursor-pointer">Chi tiết &rarr;</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Sidebar (4 Cols) -->
+            <aside class="lg:col-span-4 space-y-6">
+                
+                <!-- Weather / Market Widget (Connected to Live API) -->
+                <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-sm border border-slate-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xs font-bold text-sky-400 uppercase tracking-wider" id="widgetTitle">Thời tiết & Thị trường</span>
+                        <i class="fa-solid fa-cloud-sun text-amber-400 text-lg"></i>
+                    </div>
+                    <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+                        <div>
+                            <!-- Dữ liệu nhiệt độ lấy từ Open-Meteo API có đủ cả vĩ độ và kinh độ -->
+                            <div class="text-2xl font-black" id="liveTemp">Đang tải...</div>
+                            <div class="text-xs text-slate-400" id="widgetCity">Hà Nội, Việt Nam (Live API)</div>
+                        </div>
+                        <div class="text-right text-xs text-slate-300">
+                            <div class="font-semibold text-emerald-400">USD/VND: 25,450</div>
+                            <div class="text-slate-400 mt-1" id="widgetGold">Giá vàng: 88.5M/lượng</div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 italic" id="widgetNote">Cập nhật tự động từ Open-Meteo Weather API.</p>
+                </div>
+
+                <!-- Trending Topics Widget -->
+                <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+                    <h3 class="text-base font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100" id="sidebarTrendingTitle">
+                        Chủ đề đọc nhiều
+                    </h3>
+                    <ul class="space-y-4">
+                        <li class="flex items-start space-x-3">
+                            <span class="text-lg font-black text-slate-300">01</span>
+                            <div>
+                                <a href="#" class="text-xs font-bold text-slate-800 hover:text-sky-600 transition line-clamp-2" id="trend1">
+                                    Ứng dụng TMS giúp tự động hóa quy trình dịch thuật nội dung web
+                                </a>
+                                <span class="text-[10px] text-slate-400">12,400 lượt xem</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <span class="text-lg font-black text-slate-300">02</span>
+                            <div>
+                                <a href="#" class="text-xs font-bold text-slate-800 hover:text-sky-600 transition line-clamp-2" id="trend2">
+                                    Giải pháp bản dịch tự động bằng trí tuệ nhân tạo năm 2026
+                                </a>
+                                <span class="text-[10px] text-slate-400">8,950 lượt xem</span>
+                            </div>
+                        </li>
+                        <li class="flex items-start space-x-3">
+                            <span class="text-lg font-black text-slate-300">03</span>
+                            <div>
+                                <a href="#" class="text-xs font-bold text-slate-800 hover:text-sky-600 transition line-clamp-2" id="trend3">
+                                    Tích hợp CI/CD cho các dự án đa ngôn ngữ thế hệ mới
+                                </a>
+                                <span class="text-[10px] text-slate-400">6,120 lượt xem</span>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- API Integration Quick Help -->
+                <div class="bg-sky-50 border border-sky-100 rounded-2xl p-5 text-xs text-sky-900">
+                    <div class="font-bold flex items-center space-x-2 text-sky-800 mb-2">
+                        <i class="fa-solid fa-lightbulb text-amber-500 text-sm"></i>
+                        <span>Hướng dẫn kiểm thử API</span>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1 text-slate-600">
+                        <li>Widget thời tiết bên trên đang gọi <b>Live Weather API</b> ngầm.</li>
+                        <li>Bấm <b>TMS Console</b> góc trên để kiểm thử tính năng dịch JSON API.</li>
+                    </ol>
+                </div>
+
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 bg-white border-t border-slate-200 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+            <p id="footerCopyright">&copy; 2026 TechNews 247. Trang web tin tức thử nghiệm kết nối TMS API.</p>
+            <p class="font-mono text-slate-400">API Status: Operational | i18n Powered by TMS JSON Integration</p>
+        </div>
+    </footer>
+
+    <!-- TMS API TEST CONSOLE MODAL -->
+    <div id="tmsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="gradient-header px-6 py-4 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-terminal text-sky-400"></i>
+                    <h3 class="font-bold text-base">TMS API Integration & Simulation Console</h3>
+                </div>
+                <button onclick="closeTmsConsole()" class="text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+                
+                <!-- Endpoint Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <span class="font-semibold text-slate-700 block mb-1">GET Content Endpoint (TMS Pull):</span>
+                        <code class="bg-slate-900 text-sky-300 px-2.5 py-1 rounded font-mono block text-[11px] overflow-x-auto">
+                            GET https://news247.demo/api/v1/news/content
+                        </code>
+                        <button onclick="exportCurrentJson()" class="mt-2.5 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg font-medium transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Xuất JSON Nội dung Hiện tại</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                        <span class="font-semibold text-slate-700 block mb-1">PUT/POST Update Endpoint (TMS Push):</span>
+                        <code class="bg-slate-900 text-emerald-300 px-2.5 py-1 rounded font-mono block text-[11px] overflow-x-auto">
+                            PUT https://news247.demo/api/v1/news/content
+                        </code>
+                        <span class="text-[10px] text-slate-500 mt-2 block">Nhận JSON dịch từ TMS để cập nhật trực tiếp trang web.</span>
+                    </div>
+                </div>
+
+                <!-- JSON Editor / Viewer -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-bold text-slate-800">Dữ liệu JSON Bản dịch (Payload / Translation JSON):</label>
+                        <div class="space-x-2">
+                            <button onclick="copyCurrentModalJson()" class="text-sky-600 hover:underline"><i class="fa-regular fa-copy me-1"></i>Copy JSON</button>
+                            <button onclick="clearModalJson()" class="text-rose-600 hover:underline"><i class="fa-solid fa-trash me-1"></i>Xóa</button>
+                        </div>
+                    </div>
+                    <textarea id="jsonPayloadInput" rows="12" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-400 rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Dán nội dung JSON đã dịch từ TMS vào đây..."></textarea>
+                </div>
+
+                <!-- Response Alert -->
+                <div id="modalAlert" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex justify-end space-x-3">
+                <button onclick="closeTmsConsole()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition">
+                    Đóng
+                </button>
+                <button onclick="applyJsonFromInput()" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-xl transition shadow-sm flex items-center space-x-1.5">
+                    <i class="fa-solid fa-rotate me-1"></i>
+                    <span>Cập nhật Trang web (Simulate PUT API)</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        const translationStore = {
+            vi: {
+                metadata: { version: "[Bản gốc - VI]", badgeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
+                content: {
+                    "header.tagline": "Cập nhật tri thức công nghệ & đời sống",
+                    "nav.home": "Trang chủ",
+                    "nav.news": "Thời sự",
+                    "nav.tech": "Công nghệ",
+                    "nav.entertainment": "Giải trí",
+                    "featured.category": "Công nghệ AI",
+                    "featured.author": "Ban Biên Tập",
+                    "featured.title": "Kỷ nguyên trí tuệ nhân tạo thế hệ mới: Đột phá công nghệ thay đổi tương lai làm việc",
+                    "featured.summary": "Các mô hình ngôn ngữ lớn đang nhanh chóng thay đổi cách thức vận hành của doanh nghiệp toàn cầu. Sự kết hợp giữa AI và khả năng đa ngôn ngữ tự động giúp rút ngắn khoảng cách giao tiếp quốc tế hơn bao giờ hết.",
+                    "featured.content1": "Công nghệ AI không chỉ dừng lại ở việc xử lý văn bản đơn thuần mà đang bước sang giai đoạn thấu hiểu ngữ cảnh sâu sắc. Việc triển khai các hệ thống TMS (Translation Management System) tích hợp trực tiếp qua API cho phép các cơ quan báo chí xuất bản nội dung đa ngôn ngữ theo thời gian thực.",
+                    "featured.content2": "Nhờ quy trình phê duyệt tự động và khả năng đồng bộ Git-flow, các bản dịch nháp có thể được duyệt nhanh chóng bởi các Kiểm duyệt viên chuyên nghiệp trước khi phát hành chính thức đến độc giả toàn cầu.",
+                    "featured.btnReadMore": "Đọc tiếp bài viết",
+                    "recent.secTitle": "Tin tức mới cập nhật",
+                    "card1.category": "Đời sống",
+                    "card1.title": "Xu hướng làm việc từ xa và mô hình văn phòng linh hoạt năm 2026",
+                    "card1.summary": "Các công ty công nghệ lớn tiếp tục áp dụng mô hình làm việc kết hợp, giúp nâng cao hiệu suất làm việc và chất lượng sống của nhân viên.",
+                    "card1.time": "1 giờ trước",
+                    "card2.category": "Kinh tế số",
+                    "card2.title": "Thị trường điện toán đám mây đạt mốc tăng trưởng kỷ lục",
+                    "card2.summary": "Đầu tư vào hạ tầng AI và dịch vụ lưu trữ dữ liệu đám mây tăng mạnh tại thị trường Đông Nam Á.",
+                    "card2.time": "3 giờ trước",
+                    "widget.title": "Thời tiết & Thị trường",
+                    "widget.city": "Hà Nội, Việt Nam",
+                    "widget.gold": "Giá vàng: 88.5M/lượng",
+                    "widget.note": "Cập nhật tự động mỗi 15 phút từ API trung tâm.",
+                    "sidebar.trendingTitle": "Chủ đề đọc nhiều",
+                    "trend.1": "Ứng dụng TMS giúp tự động hóa quy trình dịch thuật nội dung web",
+                    "trend.2": "Giải pháp bản dịch tự động bằng trí tuệ nhân tạo năm 2026",
+                    "trend.3": "Tích hợp CI/CD cho các dự án đa ngôn ngữ thế hệ mới",
+                    "footer.copyright": "© 2026 TechNews 247. Trang web tin tức thử nghiệm kết nối TMS API."
+                }
+            }
+        };
+
+        let currentContent = JSON.parse(JSON.stringify(translationStore.vi.content));
+
+        const elementMapping = {
+            "headerTagline": "header.tagline",
+            "navHome": "nav.home",
+            "navNews": "nav.news",
+            "navTech": "nav.tech",
+            "navEntertainment": "nav.entertainment",
+            "featuredCategory": "featured.category",
+            "featuredAuthor": "featured.author",
+            "featuredTitle": "featured.title",
+            "featuredSummary": "featured.summary",
+            "featuredContent1": "featured.content1",
+            "featuredContent2": "featured.content2",
+            "btnReadMore": "featured.btnReadMore",
+            "secRecentTitle": "recent.secTitle",
+            "card1Category": "card1.category",
+            "card1Title": "card1.title",
+            "card1Summary": "card1.summary",
+            "card1Time": "card1.time",
+            "card2Category": "card2.category",
+            "card2Title": "card2.title",
+            "card2Summary": "card2.summary",
+            "card2Time": "card2.time",
+            "widgetTitle": "widget.title",
+            "widgetCity": "widget.city",
+            "widgetGold": "widget.gold",
+            "widgetNote": "widget.note",
+            "sidebarTrendingTitle": "sidebar.trendingTitle",
+            "trend1": "trend.1",
+            "trend2": "trend.2",
+            "trend3": "trend.3",
+            "footerCopyright": "footer.copyright"
+        };
+
+        function renderPage(contentObj) {
+            if (contentObj["featured.content1"]) {
+                document.getElementById('featuredContent').children[0].innerText = contentObj["featured.content1"];
+            }
+            if (contentObj["featured.content2"]) {
+                document.getElementById('featuredContent').children[1].innerText = contentObj["featured.content2"];
+            }
+
+            for (const [elementId, key] of Object.entries(elementMapping)) {
+                if (elementId === "featuredContent1" || elementId === "featuredContent2") continue;
+                
+                const el = document.getElementById(elementId);
+                if (el && contentObj[key] !== undefined) {
+                    if (elementId === "secRecentTitle") {
+                        el.innerHTML = `<span class="w-2.5 h-6 bg-sky-600 rounded-full me-2.5 inline-block"></span>${contentObj[key]}`;
+                    } else if (elementId === "featuredAuthor") {
+                        el.innerHTML = `<i class="fa-regular fa-user me-1.5"></i> ${contentObj[key]}`;
+                    } else {
+                        el.innerText = contentObj[key];
+                    }
+                }
+            }
+        }
+
+        function switchPreset(presetKey) {
+            if (!translationStore[presetKey]) return;
+            const preset = translationStore[presetKey];
+            currentContent = JSON.parse(JSON.stringify(preset.content));
+            renderPage(currentContent);
+
+            const badge = document.getElementById('versionBadge');
+            badge.innerText = preset.metadata.version;
+            badge.className = `badge-pulse px-2 py-0.5 rounded text-xs font-semibold border ${preset.metadata.badgeClass}`;
+            document.getElementById('jsonPayloadInput').value = JSON.stringify(currentContent, null, 2);
+        }
+
+        function openTmsConsole() {
+            document.getElementById('jsonPayloadInput').value = JSON.stringify(currentContent, null, 2);
+            document.getElementById('tmsModal').classList.remove('hidden');
+        }
+
+        function closeTmsConsole() {
+            document.getElementById('tmsModal').classList.add('hidden');
+            document.getElementById('modalAlert').classList.add('hidden');
+        }
+
+        function exportCurrentJson() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentContent, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "news247_source_content.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showAlert('Đã xuất thành công tệp JSON nội dung bài báo!', 'bg-emerald-100 text-emerald-800 border border-emerald-300');
+        }
+
+        function applyJsonFromInput() {
+            const rawJson = document.getElementById('jsonPayloadInput').value;
+            try {
+                const parsed = JSON.parse(rawJson);
+                currentContent = parsed;
+                renderPage(currentContent);
+
+                const badge = document.getElementById('versionBadge');
+                badge.innerText = "[Custom API Translation Payload]";
+                badge.className = "badge-pulse px-2 py-0.5 rounded text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30";
+
+                showAlert('Cập nhật trang web thành công từ JSON payload (Simulated PUT API)!', 'bg-sky-100 text-sky-800 border border-sky-300');
+                setTimeout(() => { closeTmsConsole(); }, 1200);
+            } catch (e) {
+                showAlert('Lỗi định dạng JSON! Vui lòng kiểm tra lại cấu trúc JSON đã dán.', 'bg-rose-100 text-rose-800 border border-rose-300');
+            }
+        }
+
+        function copyCurrentModalJson() {
+            const textarea = document.getElementById('jsonPayloadInput');
+            textarea.select();
+            document.execCommand('copy');
+            showAlert('Đã sao chép JSON vào clipboard!', 'bg-slate-100 text-slate-800 border border-slate-300');
+        }
+
+        function clearModalJson() {
+            document.getElementById('jsonPayloadInput').value = "";
+        }
+
+        function showAlert(msg, bgClass) {
+            const alertBox = document.getElementById('modalAlert');
+            alertBox.className = `p-3 rounded-xl text-xs font-medium ${bgClass}`;
+            alertBox.innerText = msg;
+            alertBox.classList.remove('hidden');
+        }
+
+        // Gọi Live Weather API với đầy đủ vĩ độ và kinh độ của Hà Nội
+        async function fetchLiveWeather() {
+            try {
+                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=21.0285&longitude=105.8542&current_weather=true');
+                const data = await response.json();
+                if (data && data.current_weather) {
+                    const temp = data.current_weather.temperature;
+                    document.getElementById('liveTemp').innerText = `${temp}°C`;
+                }
+            } catch (error) {
+                console.error('Không thể gọi API thời tiết:', error);
+                document.getElementById('liveTemp').innerText = '28°C';
+            }
+        }
+
+        window.onload = function() {
+            renderPage(currentContent);
+            fetchLiveWeather();
+        };
+    </script>
+
+</body>
+</html>
