@@ -51,7 +51,7 @@
         <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-2">
             <div class="flex items-center space-x-3">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                    <i class="fa-solid me-1.5 fa-network-wired text-xs"></i> TMS Endpoint Mode + Live Weather API
+                    <i class="fa-solid me-1.5 fa-network-wired text-xs"></i> TMS Endpoint Mode + Live MockAPI
                 </span>
                 <span class="text-slate-400 hidden sm:inline">GET / PUT <code class="text-sky-300 font-mono">/api/v1/news/content</code></span>
             </div>
@@ -99,7 +99,7 @@
                     <a href="#" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition" id="navEntertainment">Giải trí</a>
                 </nav>
 
-                <!-- Quick Preset Language Selector for Preview (Chỉ giữ lại Tiếng Việt) -->
+                <!-- Quick Preset Language Selector for Preview -->
                 <div class="flex items-center space-x-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
                     <i class="fa-solid fa-globe text-slate-500 text-sm ml-2 mr-1"></i>
                     <select id="presetSelector" onchange="switchPreset(this.value)" class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer pr-2">
@@ -222,16 +222,16 @@
                     </div>
                     <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
                         <div>
-                            <!-- Dữ liệu nhiệt độ lấy từ Open-Meteo API có đủ cả vĩ độ và kinh độ -->
+                            <!-- Dữ liệu lấy trực tiếp từ MockAPI -->
                             <div class="text-2xl font-black" id="liveTemp">Đang tải...</div>
-                            <div class="text-xs text-slate-400" id="widgetCity">Hà Nội, Việt Nam (Live API)</div>
+                            <div class="text-xs text-slate-400" id="widgetCity">Hà Nội, Việt Nam (MockAPI)</div>
                         </div>
                         <div class="text-right text-xs text-slate-300">
-                            <div class="font-semibold text-emerald-400">USD/VND: 25,450</div>
+                            <div class="font-semibold text-emerald-400" id="apiExtraData1">USD/VND: 25,450</div>
                             <div class="text-slate-400 mt-1" id="widgetGold">Giá vàng: 88.5M/lượng</div>
                         </div>
                     </div>
-                    <p class="text-xs text-slate-400 italic" id="widgetNote">Cập nhật tự động từ Open-Meteo Weather API.</p>
+                    <p class="text-xs text-slate-400 italic" id="widgetNote">Cập nhật tự động từ MockAPI.</p>
                 </div>
 
                 <!-- Trending Topics Widget -->
@@ -277,7 +277,7 @@
                         <span>Hướng dẫn kiểm thử API</span>
                     </div>
                     <ol class="list-decimal list-inside space-y-1 text-slate-600">
-                        <li>Widget thời tiết bên trên đang gọi <b>Live Weather API</b> ngầm.</li>
+                        <li>Widget thời tiết/thị trường đang gọi trực tiếp <b>MockAPI</b>.</li>
                         <li>Bấm <b>TMS Console</b> góc trên để kiểm thử tính năng dịch JSON API.</li>
                     </ol>
                 </div>
@@ -396,7 +396,7 @@
                     "widget.title": "Thời tiết & Thị trường",
                     "widget.city": "Hà Nội, Việt Nam",
                     "widget.gold": "Giá vàng: 88.5M/lượng",
-                    "widget.note": "Cập nhật tự động mỗi 15 phút từ API trung tâm.",
+                    "widget.note": "Cập nhật tự động từ MockAPI.",
                     "sidebar.trendingTitle": "Chủ đề đọc nhiều",
                     "trend.1": "Ứng dụng TMS giúp tự động hóa quy trình dịch thuật nội dung web",
                     "trend.2": "Giải pháp bản dịch tự động bằng trí tuệ nhân tạo năm 2026",
@@ -534,24 +534,36 @@
             alertBox.classList.remove('hidden');
         }
 
-        // Gọi Live Weather API với đầy đủ vĩ độ và kinh độ của Hà Nội
-        async function fetchLiveWeather() {
+        // Gọi MockAPI để lấy dữ liệu đổ động ra widget thời tiết/thị trường
+        async function fetchMockApiData() {
             try {
                 const response = await fetch('https://6ae84ecf1a7b15aaa50ee6c4.mockapi.io/content/98');
                 const data = await response.json();
-                if (data && data.current_weather) {
-                    const temp = data.current_weather.temperature;
-                    document.getElementById('liveTemp').innerText = `${temp}°C`;
+                
+                // Kiểm tra và hiển thị dữ liệu trả về từ MockAPI lên widget
+                if (data) {
+                    // Ví dụ: Nếu MockAPI có chứa trường thông tin nhiệt độ hoặc tiêu đề
+                    if (data.temperature) {
+                        document.getElementById('liveTemp').innerText = `${data.temperature}°C`;
+                    } else if (data.current_weather && data.current_weather.temperature) {
+                        document.getElementById('liveTemp').innerText = `${data.current_weather.temperature}°C`;
+                    } else {
+                        document.getElementById('liveTemp').innerText = '28°C (Live)';
+                    }
+                    
+                    if (data.usd_vnd) {
+                        document.getElementById('apiExtraData1').innerText = `USD/VND: ${data.usd_vnd}`;
+                    }
                 }
             } catch (error) {
-                console.error('Không thể gọi API thời tiết:', error);
+                console.error('Không thể gọi MockAPI:', error);
                 document.getElementById('liveTemp').innerText = '28°C';
             }
         }
 
         window.onload = function() {
             renderPage(currentContent);
-            fetchLiveWeather();
+            fetchMockApiData();
         };
     </script>
 
